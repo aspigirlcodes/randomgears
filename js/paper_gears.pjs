@@ -18,37 +18,34 @@
 
 var speed = 0.75;
 var clockwise = false;
-var width = 960;
-var height = 650;
 var started = true;
 var scale = 10;
 var toothSize = scale * 2 - 2;
+var width = project.view.viewSize.width
+var height = project.view.viewSize.height
 
 var gears = [];
+var outlines = new CompoundPath();
 
 
 /**
  * This function initializes our script.
  */
 function init() {
-    scale = randomInt(10, 25)
+    scale = randomInt(10, 20)
+    console.log("scale: " + scale)
     toothSize = scale * 2 - 2;
-    var p = new Point(width / 6, (height / 3) + 30);
-    var redGear = new Gear();
-    redGear.create(p, 15, randomColor(), speed, !clockwise);         // red gear
-    gears.push(redGear);
+    var p = new Point(0, height / 2);
+    var g = new Gear();
 
-    g = addGear(redGear, 4, randomColor(), 100);            // blue gear
-
-    g = addGear(g.gear, 41, randomColor(), 52);   // green gear
-    g = addGear(g.gear, 6, randomColor(), 324);     // dark red gear
-    g = addGear(g.gear, 9, randomColor(), 30);   // light purple gear
-    g = addGear(g.gear, 4, randomColor(), 298);    // yellow gear
-    g = addGear(g.gear, 21, randomColor(), 248);    // beige gear
-    g = addGear(g.gear, 11, randomColor(), 210);   // pink gear
-    g = addGear(g.gear, 8, randomColor(), 124);   // dark green gear
-    //g = addGear(g.point, g.gear, 8, '#ee5b32', g.speed, 322);   // orange gear
-
+    var r0 = 15 * scale / 2.0;
+    var outline = new Path.Circle(p, r0 + toothSize);
+    //outline.visible = false;
+    g.create(p, r0 , randomColor(), speed, !clockwise, outline);         // red gear
+    gears.push(g);
+    while (g.getPoint().x < width){
+      g = addGear(g);            // blue gear
+    }
 
 }
 
@@ -56,22 +53,21 @@ function Gear() {
     this.angle = 0.0;
     this.group = new Group();
 
-    this.create = function(/*Point*/ p, /*int*/ teeth, /*color*/ c, /*int*/ speed, /*boolean*/ clockwise) {
+    this.create = function(/*Point*/ p, /*int*/ r, /*color*/ c, /*int*/ speed, /*boolean*/ clockwise, outline) {
         this.speed = speed;
         this.clockwise = clockwise;
+        outlines.addChild(outline);
 
-        var d = teeth * scale;
-
-        var outerCircle = new Path.Circle(p, d / 2);
+        var outerCircle = new Path.Circle(p, r);
         outerCircle.fillColor = c;
 
-        var innerCircle = new Path.Circle(p, d / 8);
+        var innerCircle = new Path.Circle(p, r/4);
         innerCircle.fillColor = 'white';
 
-        this.group.addChild(this.drawTeeth((d / 2) - 5, d / scale, c, p));
+        this.group.addChild(this.drawTeeth(r - scale / 3.0, 2.0 * r / scale, c, p));
     }
 
-    this.drawTeeth = function(/*int*/ d, /*int*/ plots, /*color*/ c, /*Point*/ p) {
+    this.drawTeeth = function(/*int*/ r, /*int*/ plots, /*color*/ c, /*Point*/ p) {
         var increase = Math.PI * 2 / plots;
         var angle = 0;
 
@@ -82,8 +78,8 @@ function Gear() {
 
         for (var i = 0; i < plots; i++) {
             var t = 2 * Math.PI * i / plots;
-            var x = Math.round((d + (toothSize / 2)) * Math.cos(t));
-            var y = Math.round((d + (toothSize / 2)) * Math.sin(t));
+            var x = (r + (toothSize / 2)) * Math.cos(t);
+            var y = (r + (toothSize / 2)) * Math.sin(t);
 
             var placed = symbol.place(new Point(p.x + x, p.y + y));
 
@@ -99,19 +95,19 @@ function Gear() {
 
     this.createTooth = function(/*color*/ c) {
         var path = new Path();
-        path.add(new Point(-(toothSize / 4) + 2, -(toothSize / 2)));  // upper left
-        path.add(new Point((toothSize / 4) - 2, -(toothSize / 2)));   // upper right
+        path.add(new Point(-(toothSize / 4.0) + 2, -(toothSize / 2.0)));  // upper left
+        path.add(new Point((toothSize / 4.0) - 2, -(toothSize / 2.0)));   // upper right
 
         // Curve down to the bottom right point
-        var throughPoint = new Point(new Point((toothSize / 4), -(toothSize / 2) + 4));
-        var toPoint = new Point((toothSize / 2), (toothSize / 2));
+        var throughPoint = new Point((toothSize / 4.0), -(toothSize / 2.0) + 4);
+        var toPoint = new Point((toothSize / 2.0), (toothSize / 2.0));
         path.arcTo(throughPoint, toPoint);
 
         path.add(new Point(-(toothSize / 2), (toothSize / 2)));   // bottom left
 
         // Curve up to the top left point
-        throughPoint = new Point(new Point(new Point(-(toothSize / 4) , -(toothSize / 2) + 4)));
-        toPoint = new Point(-(toothSize / 4) + 2, -(toothSize / 2));
+        throughPoint = new Point(-(toothSize / 4.0) , -(toothSize / 2.0) + 4);
+        toPoint = new Point(-(toothSize / 4.0) + 2, -(toothSize / 2.0));
         path.arcTo(throughPoint, toPoint);
         path.closePath();
         path.fillColor = c;
@@ -157,18 +153,34 @@ function onMouseUp(event) {
     started = !started;
 }
 
-function addGear(/*Gear*/ gear1, /*int*/ g2, /*color*/ color, /*int*/ angle) {
-    var r1 = (gear1.getToothCount() * scale) / 2;
-    var r2 = (g2 * scale) / 2;
+function addGear(/*Gear*/ gear1) {
+    var g2 = randomInt(8,40); // number of teeth
+    var color = randomColor();
+    var angle = randomInt(-90, 90);
+
+    var r1 = (gear1.getToothCount() * scale) / 2.0;
+    var r2 = (g2 * scale) / 2.0;
     var p1 = gear1.getPoint();
     var p2 = new Point(p1.x + ((r1 + r2 + (toothSize - 2)) * Math.cos((angle / 180) * Math.PI)),
                        p1.y + ((r1 + r2 + (toothSize - 2)) * Math.sin((angle / 180) * Math.PI)));
-    var speed1 = gear1.getSpeed()
+
+    if (p2.y<0 || p2.y>height){
+      return gear1;
+    }
+
+    var outline = new Path.Circle(p2, (r2 + toothSize));
+    //outline.visible = false;
+    if (outline.getIntersections(outlines).length > 2){
+      return gear1;
+    }
+
+    var speed1 = gear1.getSpeed();
     var speed2 = speed1 * gear1.getToothCount() / g2;
 
     var gear2 = new Gear();
-    gear2.create(p2, g2, color, speed2, clockwise);
+    gear2.create(p2, r2, color, speed2, clockwise, outline);
     gears.push(gear2);
+
 
     /*
      * Now we need to rotate the gears so they match up
@@ -199,11 +211,7 @@ function addGear(/*Gear*/ gear1, /*int*/ g2, /*color*/ color, /*int*/ angle) {
     gear2.rot(v.angle - v2.angle);
 
     clockwise = !clockwise;
-    return {
-        'point': p2,
-        'speed': speed2,
-        'gear': gear2
-    };
+    return gear2;
 }
 
 /**

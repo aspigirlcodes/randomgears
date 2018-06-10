@@ -8,7 +8,7 @@ const randomColor = (() => {
   return () => {
     var h = randomInt(0, 360);
     var s = randomInt(42, 98);
-    var l = randomInt(40, 90);
+    var l = randomInt(40, 75);
     return `hsl(${h},${s}%,${l}%)`;
   };
 })();
