@@ -1,3 +1,5 @@
+/* Based on https://gist.github.com/bendc/76c48ce53299e6078a76 */
+
 const randomInt = (min, max) => {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 };
